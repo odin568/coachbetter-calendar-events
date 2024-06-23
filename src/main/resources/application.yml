@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: coachbetter-calendar-events
+  main:
+    banner-mode: off
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - info
+          - health
+  endpoint:
+    health:
+      show-details: ALWAYS
+  info:
+    java:
+      enabled: true
+  health:
+    ping:
+      enabled: true
+    defaults:
+      enabled: false
+  security:
+    enabled: false
