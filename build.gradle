@@ -5,7 +5,25 @@ plugins {
 }
 
 group = 'com.odin568'
-version = '0.0.1-SNAPSHOT'
+
+// GitHub-Version >> Docker Version >> Fallback
+if (System.getenv("RELEASE_VERSION")) {
+	version = System.getenv("RELEASE_VERSION")
+}
+else if (project.hasProperty("RELEASE_VERSION") && project.getProperty("RELEASE_VERSION") && !project.getProperty("RELEASE_VERSION").allWhitespace) {
+	version = project.getProperty("RELEASE_VERSION")
+}
+else {
+	version = "SNAPSHOT"
+}
+println("Building version $version")
+
+// Omit version number in artifacts for simpler releases
+bootJar.archiveFileName = "coachbetter-calendar-events.jar"
+
+jar {
+	enabled = false
+}
 
 java {
 	toolchain {
@@ -26,4 +44,8 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+springBoot {
+	buildInfo()
 }
