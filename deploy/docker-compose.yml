@@ -1,0 +1,15 @@
+version: '3.7'
+
+services:
+  coachbetter-calendar-events:
+    image: odin568/coachbetter-calendar-events:latest
+    container_name: coachbetter-calendar-events
+    restart: always
+    environment:
+      - COACHBETTER_HOST=<API-URL>
+      - COACHBETTER_APIKEY=<API-KEY>
+      - COACHBETTER_USERAGENT=<USER-AGENT>
+      - COACHBETTER_USERNAME=<USERNAME>
+      - COACHBETTER_PASSWORD=<PASSWORD>
+    ports:
+      - "5000:8080"
