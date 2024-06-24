@@ -206,7 +206,7 @@ public class CalendarService implements HealthIndicator
         StringBuilder sb = new StringBuilder();
         for (var entry : groupedByAvailability.entrySet())
         {
-            sb.append(entry.getKey()).append(System.lineSeparator());
+            sb.append(System.lineSeparator()).append("*").append(entry.getKey()).append("*").append(System.lineSeparator());
             entry.getValue().forEach(p -> sb.append(p).append(System.lineSeparator()));
         }
         return sb.toString().trim();
