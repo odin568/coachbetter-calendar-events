@@ -4,10 +4,7 @@ import com.odin568.coachbetter_calendar_events.entity.event.Datum;
 import net.fortuna.ical4j.model.*;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.component.VTimeZone;
-import net.fortuna.ical4j.model.property.Description;
-import net.fortuna.ical4j.model.property.Location;
-import net.fortuna.ical4j.model.property.ProdId;
-import net.fortuna.ical4j.model.property.Uid;
+import net.fortuna.ical4j.model.property.*;
 import net.fortuna.ical4j.model.property.immutable.ImmutableCalScale;
 import net.fortuna.ical4j.model.property.immutable.ImmutableVersion;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,8 +42,10 @@ public class CalendarService {
 
         var auth = coachbetterService.Authenticate();
         var teams = coachbetterService.GetTeams(auth);
+        String calendarName = "Coachbetter";
         for (var team : teams.getData())
         {
+            calendarName += " - " + team.getName();
             var seasons = coachbetterService.GetSeasons(auth, team.getId());
             for (var season : seasons.getData())
             {
@@ -57,6 +56,7 @@ public class CalendarService {
                 }
             }
         }
+        calendar.add(new Name(calendarName));
 
         return calendar.toString();
     }
