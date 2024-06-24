@@ -5,6 +5,8 @@ import com.odin568.coachbetter_calendar_events.entity.event.Events;
 import com.odin568.coachbetter_calendar_events.entity.season.Season;
 import com.odin568.coachbetter_calendar_events.entity.team.Team;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -14,8 +16,9 @@ import org.springframework.web.client.RestTemplate;
 import java.util.*;
 
 @Service
-public class CoachbetterService {
-
+public class CoachbetterService
+{
+    private final Logger logger = LoggerFactory.getLogger(CoachbetterService.class);
     private final String host;
     private final String apiKey;
     private final String userAgent;
@@ -38,6 +41,7 @@ public class CoachbetterService {
 
     public Auth Authenticate()
     {
+        logger.info("Authenticating");
         final String uri = "https://" + host + "/api/v2/auth/login";
 
         JSONObject jsonObject = new JSONObject();
@@ -55,6 +59,7 @@ public class CoachbetterService {
 
     public Auth Refresh(String refreshToken)
     {
+        logger.info("Refreshing authentication");
         final String uri = "https://" + host + "/api/v2/auth/refresh-token";
 
         JSONObject jsonObject = new JSONObject();
@@ -71,6 +76,7 @@ public class CoachbetterService {
 
     public Team GetTeams(Auth auth)
     {
+        logger.info("Querying Teams");
         final String uri = "https://" + host + "/api/v2/teams";
 
         HttpEntity<String> entity = CreateHttpEntity(null, auth);
@@ -83,6 +89,7 @@ public class CoachbetterService {
 
     public Season GetSeasons(Auth auth, int teamId)
     {
+        logger.info("Querying Seasons for Team " + teamId);
         final String uri = "https://" + host + "/api/teams/" + teamId + "/seasons";
 
         HttpEntity<String> entity = CreateHttpEntity(null, auth);
@@ -95,6 +102,8 @@ public class CoachbetterService {
 
     public Events GetSeasonEvents(Auth auth, int seasonId)
     {
+        logger.info("Querying Events for Season " + seasonId);
+
         final String uri = "https://" + host + "/api/seasons/" + seasonId + "/user-events";
 
         HttpEntity<String> entity = CreateHttpEntity(null, auth);
