@@ -36,8 +36,7 @@ public class CalendarService implements HealthIndicator
         this.coachbetterService = coachbetterService;
     }
 
-    @PostConstruct
-    @Scheduled(fixedDelay = 1, initialDelay = 1, timeUnit = TimeUnit.HOURS)
+    @Scheduled(fixedDelay = 1, timeUnit = TimeUnit.HOURS)
     public synchronized Auth GetAuth()
     {
         if (authCache != null)
