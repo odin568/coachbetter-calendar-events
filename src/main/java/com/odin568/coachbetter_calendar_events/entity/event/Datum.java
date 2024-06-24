@@ -156,11 +156,11 @@ public class Datum{
         this.meeting_time_utc = meeting_time_utc; }
     String meeting_time_utc;
     @JsonProperty("notes")
-    public Object getNotes() {
+    public String getNotes() {
         return this.notes; }
-    public void setNotes(Object notes) {
+    public void setNotes(String notes) {
         this.notes = notes; }
-    Object notes;
+    String notes;
     @JsonProperty("match_players")
     public ArrayList<MatchPlayer> getMatch_players() {
         return this.match_players; }

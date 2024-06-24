@@ -34,18 +34,6 @@ public class CoachbetterService {
         this.userAgent = userAgent;
         this.userName = userName;
         this.password = password;
-
-        var auth = Authenticate();
-        //var auth = Refresh(refreshToken);
-        var teams = GetTeam(auth);
-
-        int teamId = teams.getData().getFirst().getId();
-
-        Season season = GetSeason(auth, teamId);
-
-        int seasonId = season.getData().getFirst().getId();
-
-        Events events = GetSeasonEvents(auth, seasonId);
     }
 
     public Auth Authenticate()
@@ -81,7 +69,7 @@ public class CoachbetterService {
         return respEntity.getBody();
     }
 
-    public Team GetTeam(Auth auth)
+    public Team GetTeams(Auth auth)
     {
         final String uri = "https://" + host + "/api/v2/teams";
 
@@ -93,7 +81,7 @@ public class CoachbetterService {
         return respEntity.getBody();
     }
 
-    public Season GetSeason(Auth auth, int teamId)
+    public Season GetSeasons(Auth auth, int teamId)
     {
         final String uri = "https://" + host + "/api/teams/" + teamId + "/seasons";
 

@@ -1,0 +1,6 @@
+coachbetter:
+  host: 'reg.cb.com'
+  apiKey: 'abcdef'
+  userAgent: 'cb/1.2.3 (1234)'
+  username: 'my@email.de'
+  password: 'myPassword'
