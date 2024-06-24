@@ -56,8 +56,10 @@ public class CalendarService {
                 }
             }
         }
-        calendar.getProperties().add(new XProperty("X-WR-CALNAME", calendarName));
-        calendar.getProperties().add(new XProperty("X-WR-TIMEZONE", "Europe/Berlin"));
+
+        // TODO
+        //calendar.getProperties().add(new XProperty("X-WR-CALNAME", calendarName));
+        //calendar.getProperties().add(new XProperty("X-WR-TIMEZONE", "Europe/Berlin"));
 
         return calendar.toString();
     }
