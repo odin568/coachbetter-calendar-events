@@ -11,5 +11,6 @@ services:
       - COACHBETTER_USERAGENT=<USER-AGENT>
       - COACHBETTER_USERNAME=<USERNAME>
       - COACHBETTER_PASSWORD=<PASSWORD>
+      - SECRET=<SECRET> (optional)
     ports:
       - "5000:8080"
