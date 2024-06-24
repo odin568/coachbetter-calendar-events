@@ -90,19 +90,33 @@ public class CalendarService implements HealthIndicator
     private VEvent BuildIcalEvent(Datum input, VTimeZone tz)
     {
         Temporal start = parseDate(input.getDate_utc());
+        Temporal meeting = parseDate(input.getMeeting_time_utc());
         Temporal end = parseDate(input.getEnd_time_utc());
-
         if (end == null)
             end = start.plus(3, ChronoUnit.HOURS);
 
-        String summary = switch (input.getRelation()) {
-            case "training" -> "Training";
-            case "event" -> input.getDescription();
-            case "match" -> input.getOpponent();
-            default -> input.getRelation(); // Whatever
-        };
+        String title, description;
 
-        VEvent event = new VEvent(start, end, summary);
+        switch (input.getRelation()) {
+            case "training":
+                title = "Training";
+                description = BuildTrainingDescription(input);
+                break;
+            case "event":
+                title = input.getDescription();
+                description = BuildEventDescription(input);
+                break;
+            case "match":
+                title = input.getOpponent();
+                description = BuildMatchDescription(input);
+                break;
+            default:
+                title = input.getRelation();
+                description = "";
+        }
+
+        VEvent event = new VEvent(meeting != null ? meeting : start, end, title);
+        event.add(new Description(description));
         event.add(tz);
         event.add(new Uid(String.valueOf(input.getUuid())));
 
@@ -113,6 +127,52 @@ public class CalendarService implements HealthIndicator
             event.add(new Location(input.getLocation()));
 
         return event;
+    }
+
+    private String BuildMatchDescription(Datum input) {
+        StringBuilder sb = new StringBuilder();
+        for(var player : input.getMatch_players())
+        {
+            String firstname = player.getRelationships().getPlayer().getFirst_name();
+            String lastname = player.getRelationships().getPlayer().getLast_name();
+            String available = ToReadableAvailabilityState(player.getIn_roster());
+            sb.append(lastname).append(", ").append(firstname).append(": ").append(available).append(System.lineSeparator());
+        }
+        return sb.toString().trim();
+    }
+
+    private String BuildEventDescription(Datum input) {
+        StringBuilder sb = new StringBuilder();
+        for(var player : input.getEvent_players())
+        {
+            String firstname = player.getRelationships().getPlayer().getFirst_name();
+            String lastname = player.getRelationships().getPlayer().getLast_name();
+            String available = ToReadableAvailabilityState(player.getAvailability());
+            sb.append(lastname).append(", ").append(firstname).append(": ").append(available).append(System.lineSeparator());
+        }
+        return sb.toString().trim();
+    }
+
+    private String BuildTrainingDescription(Datum input) {
+        StringBuilder sb = new StringBuilder();
+        for(var player : input.getTraining_players())
+        {
+            String firstname = player.getRelationships().getPlayer().getFirst_name();
+            String lastname = player.getRelationships().getPlayer().getLast_name();
+            String available = ToReadableAvailabilityState(player.getAvailability());
+            sb.append(lastname).append(", ").append(firstname).append(": ").append(available).append(System.lineSeparator());
+        }
+        return sb.toString().trim();
+    }
+
+    private String ToReadableAvailabilityState(String input)
+    {
+        return switch (input) {
+            case "AVAILABLE" -> "YES";
+            case "NOT_AVAILABLE" -> "NO";
+            case "NOT_RESPONDED" -> "??";
+            default -> input;
+        };
     }
 
 

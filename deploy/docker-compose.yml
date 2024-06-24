@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   coachbetter-calendar-events:
     image: odin568/coachbetter-calendar-events:latest
