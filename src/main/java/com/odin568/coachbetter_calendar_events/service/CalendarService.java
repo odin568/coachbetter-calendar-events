@@ -83,7 +83,7 @@ public class CalendarService implements HealthIndicator
     {
         Calendar calendar = new Calendar();
         calendar.add(new ProdId("-//coachbetter-calendar-events//iCal4j 1.0//EN"));
-        calendar.add(new XProperty("X-WR-CALNAME", "coachbetter"));
+        calendar.add(new XProperty("X-WR-CALNAME", "coachbetter " + (personal ? "Personal" : "Team")));
         calendar.add(new XProperty("X-WR-TIMEZONE", timeZoneId));
         calendar.add(ImmutableVersion.VERSION_2_0);
         calendar.add(ImmutableCalScale.GREGORIAN);
