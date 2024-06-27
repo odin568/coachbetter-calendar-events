@@ -40,7 +40,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	implementation group: 'org.json', name: 'json', version: '20240303'
-	implementation group: 'org.mnode.ical4j', name: 'ical4j', version: '4.0.0'
+	implementation group: 'org.mnode.ical4j', name: 'ical4j', version: '4.0.1'
 	implementation group: 'com.auth0', name: 'java-jwt', version: '4.4.0'
 
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
