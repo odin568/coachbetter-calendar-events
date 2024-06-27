@@ -4,13 +4,14 @@ import com.odin568.coachbetter_calendar_events.entity.Auth;
 import com.odin568.coachbetter_calendar_events.entity.event.Datum;
 import com.odin568.coachbetter_calendar_events.helper.PersonHelper;
 import com.odin568.coachbetter_calendar_events.helper.PersonHelperComparator;
-import jakarta.annotation.PostConstruct;
 import net.fortuna.ical4j.model.*;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.component.VTimeZone;
 import net.fortuna.ical4j.model.property.*;
 import net.fortuna.ical4j.model.property.immutable.ImmutableCalScale;
 import net.fortuna.ical4j.model.property.immutable.ImmutableVersion;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
@@ -25,7 +26,6 @@ import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -34,15 +34,24 @@ import java.util.stream.Collectors;
 @Service
 public class CalendarService implements HealthIndicator
 {
+    private final Logger logger = LoggerFactory.getLogger(CalendarService.class);
     private final CoachbetterService coachbetterService;
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private final String targetTimezone = System.getenv("TZ") != null ? System.getenv("TZ") : "Europe/Berlin";
+    private final VTimeZone timeZone;
+    private final String timeZoneId;
     private Auth authCache = null;
 
     @Autowired
     public CalendarService(CoachbetterService coachbetterService)
     {
         this.coachbetterService = coachbetterService;
+
+        // Create a TimeZone
+        timeZoneId = System.getenv("TZ") != null ? System.getenv("TZ") : "Europe/Berlin";
+        TimeZoneRegistry registry = TimeZoneRegistryFactory.getInstance().createRegistry();
+        TimeZone timezone = registry.getTimeZone(timeZoneId);
+        timeZone = timezone.getVTimeZone();
+        logger.info("Using timezone {}", timeZone.getProperty("TZID"));
     }
 
     @Scheduled(fixedDelay = 1, timeUnit = TimeUnit.HOURS)
@@ -60,22 +69,26 @@ public class CalendarService implements HealthIndicator
         return authCache;
     }
 
+    public String GetPersonalCalendar()
+    {
+        return BuildCalendar(true);
+    }
+
     public String GetTeamCalendar()
+    {
+        return BuildCalendar(false);
+    }
+
+    private String BuildCalendar(boolean personal)
     {
         Calendar calendar = new Calendar();
         calendar.add(new ProdId("-//coachbetter-calendar-events//iCal4j 1.0//EN"));
         calendar.add(new XProperty("X-WR-CALNAME", "coachbetter"));
-        calendar.add(new XProperty("X-WR-TIMEZONE", targetTimezone));
+        calendar.add(new XProperty("X-WR-TIMEZONE", timeZoneId));
         calendar.add(ImmutableVersion.VERSION_2_0);
         calendar.add(ImmutableCalScale.GREGORIAN);
 
-        // Create a TimeZone
-        TimeZoneRegistry registry = TimeZoneRegistryFactory.getInstance().createRegistry();
-        TimeZone timezone = registry.getTimeZone(targetTimezone);
-        VTimeZone tz = timezone.getVTimeZone();
-
         var teams = coachbetterService.GetTeams(GetAuth());
-        String calendarName = "Coachbetter";
         for (var team : teams.getData())
         {
             var seasons = coachbetterService.GetSeasons(GetAuth(), team.getId());
@@ -84,55 +97,71 @@ public class CalendarService implements HealthIndicator
                 var events = coachbetterService.GetSeasonEvents(GetAuth(), season.getId());
                 for (var event : events.getData())
                 {
-                    calendar.add(BuildIcalEvent(event, tz));
+                    calendar.add(BuildIcalEvent(event, timeZone, personal));
                 }
             }
         }
 
-        // TODO
-        //calendar.getProperties().add(new XProperty("X-WR-CALNAME", "Coachbetter"));
-        //calendar.getProperties().add(new XProperty("X-WR-TIMEZONE", targetTimezone));
-
         return calendar.toString();
     }
 
-    private VEvent BuildIcalEvent(Datum input, VTimeZone tz)
+    private VEvent BuildIcalEvent(Datum input, VTimeZone tz, boolean personal)
     {
-        Temporal start = parseDate(input.getDate_utc());
-        Temporal meeting = parseDate(input.getMeeting_time_utc());
-        Temporal end = parseDate(input.getEnd_time_utc());
+        Temporal inputMeetingTime = parseDate(input.getMeeting_time_utc());
+        Temporal inputStartTime = parseDate(input.getDate_utc());
+        Temporal inputEndTime = parseDate(input.getEnd_time_utc());
 
-        // missing enddate
-        if (end == null)
-            end = start.plus(3, ChronoUnit.HOURS);
-
-        // series have end _day_ of first element.
-        if (start.until(end, ChronoUnit.NANOS) < 0)
+        // Event-Series provide the end *date* of the first occurrence.
+        // Use thereby only the time part and reuse the date part
+        if (inputEndTime != null && inputStartTime.until(inputEndTime, ChronoUnit.NANOS) < 0)
         {
-            end = getFixedEndDateForSeries(start, end);
+            inputEndTime = getFixedEndDateForSeries(inputStartTime, inputEndTime);
+        }
+
+        // in case meeting time is provided, use this as start date
+        if (inputMeetingTime != null)
+        {
+            inputStartTime = inputMeetingTime;
         }
 
         String title, description;
-
-        switch (input.getRelation()) {
-            case "training":
+        description = switch (input.getRelation()) {
+            case "training" -> {
                 title = "Training";
-                description = BuildTrainingDescription(input);
-                break;
-            case "event":
+                yield BuildTrainingDescription(input);
+            }
+            case "event" -> {
                 title = input.getDescription();
-                description = BuildEventDescription(input);
-                break;
-            case "match":
+                yield BuildEventDescription(input);
+            }
+            case "match" -> {
                 title = input.getOpponent();
-                description = BuildMatchDescription(input);
-                break;
-            default:
+                yield BuildMatchDescription(input);
+            }
+            default -> {
                 title = input.getRelation();
-                description = "";
+                yield "";
+            }
+        };
+
+        VEvent event;
+        if (inputEndTime == null)
+        {
+            event = new VEvent(inputStartTime, title);
+        }
+        else if (isFullDayAppointment(inputStartTime, inputEndTime))
+        {
+            event = new VEvent(((ZonedDateTime)inputStartTime).toLocalDate(), title);
+        }
+        else
+        {
+            event = new VEvent(inputStartTime, inputEndTime, title);
         }
 
-        VEvent event = new VEvent(meeting != null ? meeting : start, end, title);
+        if (personal && !myPlayerIsAvailable(input)) {
+            event.add(new Transp(Transp.VALUE_TRANSPARENT));
+        }
+
         event.add(new Description(description));
         event.add(tz);
         event.add(new Uid(String.valueOf(input.getUuid())));
@@ -144,6 +173,25 @@ public class CalendarService implements HealthIndicator
             event.add(new Location(input.getLocation()));
 
         return event;
+    }
+
+    private boolean myPlayerIsAvailable(Datum input) {
+
+        for (var myPlayer : input.getMy_players())
+        {
+            if (!myPlayer.getAvailable())
+                return false;
+        }
+        return true;
+    }
+
+    private boolean isFullDayAppointment(Temporal start, Temporal end)
+    {
+        if (start == null || end == null)
+            return false;
+        var duration = java.time.Duration.between(start, end);
+        long durationHours = duration.abs().toHours();
+        return durationHours == 23 || durationHours == 24; // Is usually 23hr and 55mins
     }
 
     private Temporal getFixedEndDateForSeries(Temporal start, Temporal end)
@@ -230,4 +278,5 @@ public class CalendarService implements HealthIndicator
 
         return Health.up().build();
     }
+
 }

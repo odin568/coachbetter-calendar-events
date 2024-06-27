@@ -45,4 +45,19 @@ public class CalendarController {
         logger.info("GET /team - END");
         return new ResponseEntity<>(calendarService.GetTeamCalendar(), header, HttpStatus.OK);
     }
+
+    @GetMapping(value = "/personal", produces = "text/calendar")
+    public ResponseEntity<String> getPersonalCalendar(@RequestParam(value = "secret", required = false) Optional<String> currentSecret)
+    {
+        if (configuredSecret.isPresent()){
+            if (currentSecret.isEmpty() || !configuredSecret.get().equals(currentSecret.get()))
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        logger.info("GET /personal - START");
+        HttpHeaders header = new HttpHeaders();
+        header.add("content-disposition", "attachment; filename=\"personal.ics\"");
+        logger.info("GET /personal - END");
+        return new ResponseEntity<>(calendarService.GetPersonalCalendar(), header, HttpStatus.OK);
+    }
 }
