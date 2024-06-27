@@ -22,9 +22,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoField;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -71,15 +68,15 @@ public class CalendarService implements HealthIndicator
 
     public String GetPersonalCalendar()
     {
-        return BuildCalendar(true);
+        return buildCalendar(true);
     }
 
     public String GetTeamCalendar()
     {
-        return BuildCalendar(false);
+        return buildCalendar(false);
     }
 
-    private String BuildCalendar(boolean personal)
+    private String buildCalendar(boolean personal)
     {
         Calendar calendar = new Calendar();
         calendar.add(new ProdId("-//coachbetter-calendar-events//iCal4j 1.0//EN"));
@@ -97,7 +94,8 @@ public class CalendarService implements HealthIndicator
                 var events = coachbetterService.GetSeasonEvents(GetAuth(), season.getId());
                 for (var event : events.getData())
                 {
-                    calendar.add(BuildIcalEvent(event, timeZone, personal));
+                    var vEvent = buildEvent(event, timeZone, personal);
+                    calendar.add(vEvent);
                 }
             }
         }
@@ -105,17 +103,20 @@ public class CalendarService implements HealthIndicator
         return calendar.toString();
     }
 
-    private VEvent BuildIcalEvent(Datum input, VTimeZone tz, boolean personal)
+    private VEvent buildEvent(Datum input, VTimeZone tz, boolean personal)
     {
-        Temporal inputMeetingTime = parseDate(input.getMeeting_time_utc());
-        Temporal inputStartTime = parseDate(input.getDate_utc());
-        Temporal inputEndTime = parseDate(input.getEnd_time_utc());
+        boolean thisEventIsNotFromInterest = personal && !myPlayerIsAvailable(input);
+
+        // Get times
+        ZonedDateTime inputMeetingTime = parseDate(input.getMeeting_time_utc());
+        ZonedDateTime inputStartTime = parseDate(input.getDate_utc());
+        ZonedDateTime inputEndTime = parseDate(input.getEnd_time_utc());
 
         // Event-Series provide the end *date* of the first occurrence.
         // Use thereby only the time part and reuse the date part
-        if (inputEndTime != null && inputStartTime.until(inputEndTime, ChronoUnit.NANOS) < 0)
+        if (inputEndTime !=  null && inputEndTime.isBefore(inputStartTime))
         {
-            inputEndTime = getFixedEndDateForSeries(inputStartTime, inputEndTime);
+            inputEndTime = applyTimePartToDatePart(inputStartTime, inputEndTime);
         }
 
         // in case meeting time is provided, use this as start date
@@ -128,21 +129,26 @@ public class CalendarService implements HealthIndicator
         description = switch (input.getRelation()) {
             case "training" -> {
                 title = "Training";
-                yield BuildTrainingDescription(input);
+                yield buildTrainingDescription(input);
             }
             case "event" -> {
                 title = input.getDescription();
-                yield BuildEventDescription(input);
+                yield buildEventDescription(input);
             }
             case "match" -> {
                 title = input.getOpponent();
-                yield BuildMatchDescription(input);
+                yield buildMatchDescription(input);
             }
             default -> {
                 title = input.getRelation();
                 yield "";
             }
         };
+
+        // Prefix not relevant events
+        if (thisEventIsNotFromInterest) {
+            title = "X: " + title;
+        }
 
         VEvent event;
         if (inputEndTime == null)
@@ -151,7 +157,8 @@ public class CalendarService implements HealthIndicator
         }
         else if (isFullDayAppointment(inputStartTime, inputEndTime))
         {
-            var onlyDate = ((ZonedDateTime)inputStartTime).withZoneSameInstant(ZoneId.of(timeZoneId)).toLocalDate();
+            // Attention to take the correct date due to timezone UTC and localtime
+            var onlyDate = inputStartTime.withZoneSameInstant(ZoneId.of(timeZoneId)).toLocalDate();
             event = new VEvent(onlyDate, title);
         }
         else
@@ -159,13 +166,14 @@ public class CalendarService implements HealthIndicator
             event = new VEvent(inputStartTime, inputEndTime, title);
         }
 
-        if (personal && !myPlayerIsAvailable(input)) {
+        // Mark not relevant Events as optional
+        if (thisEventIsNotFromInterest) {
             event.add(new Transp(Transp.VALUE_TRANSPARENT));
         }
 
         event.add(new Description(description));
         event.add(tz);
-        event.add(new Uid(String.valueOf(input.getUuid())));
+        event.add(new Uid(input.getUuid()));
 
         if (input.getNotes() != null)
             event.add(new Description(input.getNotes()));
@@ -186,7 +194,7 @@ public class CalendarService implements HealthIndicator
         return true;
     }
 
-    private boolean isFullDayAppointment(Temporal start, Temporal end)
+    private boolean isFullDayAppointment(ZonedDateTime start, ZonedDateTime end)
     {
         if (start == null || end == null)
             return false;
@@ -195,24 +203,24 @@ public class CalendarService implements HealthIndicator
         return durationHours == 23 || durationHours == 24; // Is usually 23hr and 55mins
     }
 
-    private Temporal getFixedEndDateForSeries(Temporal start, Temporal end)
+    private ZonedDateTime applyTimePartToDatePart(ZonedDateTime datePart, ZonedDateTime timePart)
     {
         // If start is on 0:00, it might be day before in UTC
-        var correctlyZonedDate = ((ZonedDateTime)start).withZoneSameInstant(ZoneId.of(timeZoneId));
+        var correctlyZonedDate = datePart.withZoneSameInstant(ZoneId.of(timeZoneId));
 
         int year = correctlyZonedDate.getYear();
         int month = correctlyZonedDate.getMonth().getValue();
         int day = correctlyZonedDate.getDayOfMonth();
 
-        int hour = end.get(ChronoField.HOUR_OF_DAY);
-        int minute = end.get(ChronoField.MINUTE_OF_HOUR);
-        int second = end.get(ChronoField.SECOND_OF_MINUTE);
-        int nano = end.get(ChronoField.NANO_OF_SECOND);
+        int hour = timePart.getHour();
+        int minute = timePart.getMinute();
+        int second = timePart.getSecond();
+        int nano = timePart.getNano();
 
         return ZonedDateTime.of(year, month, day, hour, minute, second, nano, ZoneId.of("UTC"));
     }
 
-    private String BuildMatchDescription(Datum input) {
+    private String buildMatchDescription(Datum input) {
         var persons = new ArrayList<PersonHelper>();
         for(var player : input.getMatch_players())
         {
@@ -221,10 +229,10 @@ public class CalendarService implements HealthIndicator
         }
         persons.sort(new PersonHelperComparator());
 
-        return BuildResult(persons);
+        return buildPersonOverview(persons);
     }
 
-    private String BuildEventDescription(Datum input)
+    private String buildEventDescription(Datum input)
     {
         var persons = new ArrayList<PersonHelper>();
         for(var player : input.getEvent_players())
@@ -234,10 +242,10 @@ public class CalendarService implements HealthIndicator
         }
         persons.sort(new PersonHelperComparator());
 
-        return BuildResult(persons);
+        return buildPersonOverview(persons);
     }
 
-    private String BuildTrainingDescription(Datum input)
+    private String buildTrainingDescription(Datum input)
     {
         var persons = new ArrayList<PersonHelper>();
         for(var player : input.getTraining_players())
@@ -247,10 +255,10 @@ public class CalendarService implements HealthIndicator
         }
         persons.sort(new PersonHelperComparator());
 
-        return BuildResult(persons);
+        return buildPersonOverview(persons);
     }
 
-    private String BuildResult(ArrayList<PersonHelper> persons)
+    private String buildPersonOverview(ArrayList<PersonHelper> persons)
     {
         Map<String, List<PersonHelper>> groupedByAvailability = persons.stream()
                 .collect(Collectors.groupingBy(PersonHelper::getAvailability));
@@ -264,7 +272,7 @@ public class CalendarService implements HealthIndicator
         return sb.toString().trim();
     }
 
-    private Temporal parseDate(String datetimeString)
+    private ZonedDateTime parseDate(String datetimeString)
     {
         if (datetimeString == null)
             return null;
