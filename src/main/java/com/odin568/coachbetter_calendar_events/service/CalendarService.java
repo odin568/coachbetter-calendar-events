@@ -151,7 +151,8 @@ public class CalendarService implements HealthIndicator
         }
         else if (isFullDayAppointment(inputStartTime, inputEndTime))
         {
-            event = new VEvent(((ZonedDateTime)inputStartTime).toLocalDate(), title);
+            var onlyDate = ((ZonedDateTime)inputStartTime).withZoneSameInstant(ZoneId.of(timeZoneId)).toLocalDate();
+            event = new VEvent(onlyDate, title);
         }
         else
         {
@@ -196,9 +197,12 @@ public class CalendarService implements HealthIndicator
 
     private Temporal getFixedEndDateForSeries(Temporal start, Temporal end)
     {
-        int year = start.get(ChronoField.YEAR);
-        int month = start.get(ChronoField.MONTH_OF_YEAR);
-        int day = start.get(ChronoField.DAY_OF_MONTH);
+        // If start is on 0:00, it might be day before in UTC
+        var correctlyZonedDate = ((ZonedDateTime)start).withZoneSameInstant(ZoneId.of(timeZoneId));
+
+        int year = correctlyZonedDate.getYear();
+        int month = correctlyZonedDate.getMonth().getValue();
+        int day = correctlyZonedDate.getDayOfMonth();
 
         int hour = end.get(ChronoField.HOUR_OF_DAY);
         int minute = end.get(ChronoField.MINUTE_OF_HOUR);
