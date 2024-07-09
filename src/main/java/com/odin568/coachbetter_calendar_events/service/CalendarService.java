@@ -183,6 +183,7 @@ public class CalendarService implements HealthIndicator
 
         VAlarm vAlarm = new VAlarm(alarmDuration);
         vAlarm.add(new Action(Action.VALUE_DISPLAY));
+        vAlarm.add(new Description(title));
         event.add(vAlarm);
 
         if (input.getNotes() != null)
