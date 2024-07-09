@@ -24,7 +24,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAmount;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -182,7 +181,7 @@ public class CalendarService implements HealthIndicator
         event.add(new Uid(input.getUuid()));
 
         VAlarm vAlarm = new VAlarm(alarmDuration);
-        vAlarm.getProperties().add(new Action(Action.VALUE_DISPLAY));
+        vAlarm.add(new Action(Action.VALUE_DISPLAY));
         event.add(vAlarm);
 
         if (input.getNotes() != null)
