@@ -4,11 +4,7 @@ import com.odin568.coachbetter_calendar_events.entity.Auth;
 import com.odin568.coachbetter_calendar_events.entity.event.Datum;
 import com.odin568.coachbetter_calendar_events.helper.PersonHelper;
 import com.odin568.coachbetter_calendar_events.helper.PersonHelperComparator;
-import net.fortuna.ical4j.model.Calendar;
-import net.fortuna.ical4j.model.ParameterList;
-import net.fortuna.ical4j.model.TimeZone;
-import net.fortuna.ical4j.model.TimeZoneRegistry;
-import net.fortuna.ical4j.model.TimeZoneRegistryFactory;
+import net.fortuna.ical4j.model.*;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.component.VTimeZone;
 import net.fortuna.ical4j.model.property.*;
@@ -113,9 +109,9 @@ public class CalendarService implements HealthIndicator
         boolean thisEventIsNotFromInterest = personal && !myPlayerIsAvailable(input);
 
         // Get times
-        ZonedDateTime inputMeetingTime = parseDate(input.getMeeting_time_utc());
-        ZonedDateTime inputStartTime = parseDate(input.getDate_utc());
-        ZonedDateTime inputEndTime = parseDate(input.getEnd_time_utc());
+        ZonedDateTime inputMeetingTime = parseUtcDateTime(input.getMeeting_time_utc());
+        ZonedDateTime inputStartTime = parseUtcDateTime(input.getDate_utc());
+        ZonedDateTime inputEndTime = parseUtcDateTime(input.getEnd_time_utc());
 
         // Event-Series provide the end *date* of the first occurrence.
         // Use thereby only the time part and reuse the date part
@@ -158,7 +154,7 @@ public class CalendarService implements HealthIndicator
         VEvent event;
         if (inputEndTime == null)
         {
-            event = new VEvent(inputStartTime, title);
+            event = new VEvent(inputStartTime.withZoneSameInstant(ZoneId.of(timeZoneId)), title);
         }
         else if (isFullDayAppointment(inputStartTime, inputEndTime))
         {
@@ -168,7 +164,7 @@ public class CalendarService implements HealthIndicator
         }
         else
         {
-            event = new VEvent(inputStartTime, inputEndTime, title);
+            event = new VEvent(inputStartTime.withZoneSameInstant(ZoneId.of(timeZoneId)), inputEndTime.withZoneSameInstant(ZoneId.of(timeZoneId)), title);
         }
 
         // Mark not relevant Events as optional
@@ -277,7 +273,7 @@ public class CalendarService implements HealthIndicator
         return sb.toString().trim();
     }
 
-    private ZonedDateTime parseDate(String datetimeString)
+    private ZonedDateTime parseUtcDateTime(String datetimeString)
     {
         if (datetimeString == null)
             return null;
