@@ -4,7 +4,11 @@ import com.odin568.coachbetter_calendar_events.entity.Auth;
 import com.odin568.coachbetter_calendar_events.entity.event.Datum;
 import com.odin568.coachbetter_calendar_events.helper.PersonHelper;
 import com.odin568.coachbetter_calendar_events.helper.PersonHelperComparator;
-import net.fortuna.ical4j.model.*;
+import net.fortuna.ical4j.model.Calendar;
+import net.fortuna.ical4j.model.ParameterList;
+import net.fortuna.ical4j.model.TimeZone;
+import net.fortuna.ical4j.model.TimeZoneRegistry;
+import net.fortuna.ical4j.model.TimeZoneRegistryFactory;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.component.VTimeZone;
 import net.fortuna.ical4j.model.property.*;
@@ -82,6 +86,7 @@ public class CalendarService implements HealthIndicator
         calendar.add(new ProdId("-//coachbetter-calendar-events//iCal4j 1.0//EN"));
         calendar.add(new XProperty("X-WR-CALNAME", "coachbetter " + (personal ? "Personal" : "Team")));
         calendar.add(new XProperty("X-WR-TIMEZONE", timeZoneId));
+        calendar.add(new Color(new ParameterList(), "#FFFFFF"));
         calendar.add(ImmutableVersion.VERSION_2_0);
         calendar.add(ImmutableCalScale.GREGORIAN);
 
