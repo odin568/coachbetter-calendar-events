@@ -19,10 +19,12 @@ import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAmount;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -153,6 +155,7 @@ public class CalendarService implements HealthIndicator
             title = "X: " + title;
         }
 
+        Duration alarmDuration = Duration.ofHours(1);
         VEvent event;
         if (inputEndTime == null)
         {
@@ -160,6 +163,7 @@ public class CalendarService implements HealthIndicator
         }
         else if (isFullDayAppointment(inputStartTime, inputEndTime))
         {
+            alarmDuration = Duration.ofDays(1);
             // Attention to take the correct date due to timezone UTC and localtime
             var onlyDate = inputStartTime.withZoneSameInstant(ZoneId.of(timeZoneId)).toLocalDate();
             event = new VEvent(onlyDate, title);
@@ -176,6 +180,10 @@ public class CalendarService implements HealthIndicator
 
         event.add(new Description(description));
         event.add(new Uid(input.getUuid()));
+
+        VAlarm vAlarm = new VAlarm(alarmDuration);
+        vAlarm.getProperties().add(new Action(Action.VALUE_DISPLAY));
+        event.add(vAlarm);
 
         if (input.getNotes() != null)
             event.add(new Description(input.getNotes()));
