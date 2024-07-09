@@ -154,15 +154,16 @@ public class CalendarService implements HealthIndicator
             title = "X: " + title;
         }
 
-        Duration alarmDuration = Duration.ofHours(1);
+        Duration alarmDuration = Duration.ofHours(-1);
         VEvent event;
         if (inputEndTime == null)
         {
+            assert inputStartTime != null;
             event = new VEvent(inputStartTime.withZoneSameInstant(ZoneId.of(timeZoneId)), title);
         }
         else if (isFullDayAppointment(inputStartTime, inputEndTime))
         {
-            alarmDuration = Duration.ofDays(1);
+            alarmDuration = Duration.ofDays(-1);
             // Attention to take the correct date due to timezone UTC and localtime
             var onlyDate = inputStartTime.withZoneSameInstant(ZoneId.of(timeZoneId)).toLocalDate();
             event = new VEvent(onlyDate, title);
