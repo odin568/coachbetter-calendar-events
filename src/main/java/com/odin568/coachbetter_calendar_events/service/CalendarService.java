@@ -5,6 +5,7 @@ import com.odin568.coachbetter_calendar_events.entity.event.Datum;
 import com.odin568.coachbetter_calendar_events.helper.PersonHelper;
 import com.odin568.coachbetter_calendar_events.helper.PersonHelperComparator;
 import net.fortuna.ical4j.model.*;
+import net.fortuna.ical4j.model.component.VAlarm;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.component.VTimeZone;
 import net.fortuna.ical4j.model.property.*;
@@ -76,15 +77,16 @@ public class CalendarService implements HealthIndicator
         return buildCalendar(false);
     }
 
-    private String buildCalendar(boolean personal)
+    private String buildCalendar(boolean isPersonal)
     {
         Calendar calendar = new Calendar();
         calendar.add(new ProdId("-//coachbetter-calendar-events//iCal4j 1.0//EN"));
-        calendar.add(new XProperty("X-WR-CALNAME", "coachbetter " + (personal ? "Personal" : "Team")));
+        calendar.add(new XProperty("X-WR-CALNAME", "coachbetter " + (isPersonal ? "Personal" : "Team")));
         calendar.add(new XProperty("X-WR-TIMEZONE", timeZoneId));
         calendar.add(new Color(new ParameterList(), "#FFFFFF"));
         calendar.add(ImmutableVersion.VERSION_2_0);
         calendar.add(ImmutableCalScale.GREGORIAN);
+        calendar.add(timeZone);
 
         var teams = coachbetterService.GetTeams(GetAuth());
         for (var team : teams.getData())
@@ -95,7 +97,7 @@ public class CalendarService implements HealthIndicator
                 var events = coachbetterService.GetSeasonEvents(GetAuth(), season.getId());
                 for (var event : events.getData())
                 {
-                    var vEvent = buildEvent(event, timeZone, personal);
+                    var vEvent = buildEvent(event, isPersonal);
                     calendar.add(vEvent);
                 }
             }
@@ -104,7 +106,7 @@ public class CalendarService implements HealthIndicator
         return calendar.toString();
     }
 
-    private VEvent buildEvent(Datum input, VTimeZone tz, boolean personal)
+    private VEvent buildEvent(Datum input, boolean personal)
     {
         boolean thisEventIsNotFromInterest = personal && !myPlayerIsAvailable(input);
 
@@ -173,7 +175,6 @@ public class CalendarService implements HealthIndicator
         }
 
         event.add(new Description(description));
-        event.add(tz);
         event.add(new Uid(input.getUuid()));
 
         if (input.getNotes() != null)
