@@ -178,14 +178,17 @@ public class CalendarService implements HealthIndicator
             event.add(new Transp(Transp.VALUE_TRANSPARENT));
         }
 
+        // Create alarms for relevant events
+        if (!thisEventIsNotFromInterest)
+        {
+            VAlarm vAlarm = new VAlarm(alarmDuration);
+            vAlarm.add(new Action(Action.VALUE_DISPLAY));
+            vAlarm.add(new Description(title));
+            event.add(vAlarm);
+        }
+
         event.add(new Description(description));
         event.add(new Uid(input.getUuid()));
-
-        VAlarm vAlarm = new VAlarm(alarmDuration);
-        vAlarm.add(new Action(Action.VALUE_DISPLAY));
-        vAlarm.add(new Description(title));
-        event.add(vAlarm);
-
         if (input.getNotes() != null)
             event.add(new Description(input.getNotes()));
 
