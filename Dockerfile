@@ -1,5 +1,5 @@
 FROM eclipse-temurin:21-jdk AS builder
-WORKDIR application
+WORKDIR /app
 COPY build/libs/*.jar application.jar
 RUN java -Djarmode=layertools -jar application.jar extract
 
@@ -15,19 +15,19 @@ RUN apt-get update && apt-get install --no-install-recommends -y tzdata && apt-g
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Create user/group
-RUN groupadd --gid 1000 appgroup && \
+RUN groupadd --gid 3000 appgroup && \
     useradd -rm -d /home/appuser -s /bin/bash -g appgroup -G sudo -u 1000 appuser
 
 # Create and own directory
-RUN mkdir application && chown -R appuser:appgroup ./application
+RUN mkdir /app && chown -R appuser:appgroup /app
 USER appuser
-WORKDIR application
+WORKDIR /app
 
 # Copy application from builder stage
-COPY --chown=appuser:appgroup --from=builder application/dependencies/ ./
-COPY --chown=appuser:appgroup --from=builder application/spring-boot-loader/ ./
-COPY --chown=appuser:appgroup --from=builder application/snapshot-dependencies/ ./
-COPY --chown=appuser:appgroup --from=builder application/application/ ./
+COPY --chown=appuser:appgroup --from=builder /app/dependencies/ ./
+COPY --chown=appuser:appgroup --from=builder /app/spring-boot-loader/ ./
+COPY --chown=appuser:appgroup --from=builder /app/snapshot-dependencies/ ./
+COPY --chown=appuser:appgroup --from=builder /app/application/ ./
 
 # Set entrypoint
 ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
