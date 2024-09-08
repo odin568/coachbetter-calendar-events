@@ -243,7 +243,7 @@ public class CalendarService implements HealthIndicator
         }
         persons.sort(new PersonHelperComparator());
 
-        return buildPersonOverview(persons);
+        return prepareAdditionalInfo(input) + buildPersonOverview(persons);
     }
 
     private String buildEventDescription(Datum input)
@@ -256,7 +256,7 @@ public class CalendarService implements HealthIndicator
         }
         persons.sort(new PersonHelperComparator());
 
-        return buildPersonOverview(persons);
+        return prepareAdditionalInfo(input) + buildPersonOverview(persons);
     }
 
     private String buildTrainingDescription(Datum input)
@@ -269,7 +269,16 @@ public class CalendarService implements HealthIndicator
         }
         persons.sort(new PersonHelperComparator());
 
-        return buildPersonOverview(persons);
+        return prepareAdditionalInfo(input) + buildPersonOverview(persons);
+    }
+
+    private String prepareAdditionalInfo(Datum input)
+    {
+        String additionalDesc = input.getAdditional_info();
+        if (additionalDesc == null || additionalDesc.trim().isEmpty())
+            return "";
+        else
+            return additionalDesc + System.lineSeparator() + System.lineSeparator();
     }
 
     private String buildPersonOverview(ArrayList<PersonHelper> persons)
