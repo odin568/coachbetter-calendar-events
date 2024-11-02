@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -116,9 +117,17 @@ public class CalendarService implements HealthIndicator
         ZonedDateTime inputStartTime = parseUtcDateTime(input.getDate_utc());
         ZonedDateTime inputEndTime = parseUtcDateTime(input.getEnd_time_utc());
 
+        if (inputStartTime.getYear() == 2024 &&
+            inputStartTime.getMonth() == Month.NOVEMBER &&
+            inputStartTime.getDayOfMonth() == 1)
+        {
+            // Set breakpoint for debugging certain event
+            logger.debug("Debug breakpoint");
+        }
+
         // Event-Series provide the end *date* of the first occurrence.
         // Use thereby only the time part and reuse the date part
-        if (inputEndTime !=  null && inputEndTime.isBefore(inputStartTime))
+        if (inputEndTime != null && inputEndTime.isBefore(inputStartTime))
         {
             inputEndTime = applyTimePartToDatePart(inputStartTime, inputEndTime);
         }
@@ -158,7 +167,6 @@ public class CalendarService implements HealthIndicator
         VEvent event;
         if (inputEndTime == null)
         {
-            assert inputStartTime != null;
             event = new VEvent(inputStartTime.withZoneSameInstant(ZoneId.of(timeZoneId)), title);
         }
         else if (isFullDayAppointment(inputStartTime, inputEndTime))
@@ -226,10 +234,11 @@ public class CalendarService implements HealthIndicator
         int month = correctlyZonedDate.getMonth().getValue();
         int day = correctlyZonedDate.getDayOfMonth();
 
-        int hour = timePart.getHour();
-        int minute = timePart.getMinute();
-        int second = timePart.getSecond();
-        int nano = timePart.getNano();
+        var correctlyZonedTime = timePart.withZoneSameInstant(ZoneId.of(timeZoneId));
+        int hour = correctlyZonedTime.getHour();
+        int minute = correctlyZonedTime.getMinute();
+        int second = correctlyZonedTime.getSecond();
+        int nano = correctlyZonedTime.getNano();
 
         return ZonedDateTime.of(year, month, day, hour, minute, second, nano, ZoneId.of("UTC"));
     }
